@@ -153,7 +153,8 @@ def run_live_demonstration(project_root: Path) -> None:
         "total_records": len(trials), "baseline_runs": b_m.total_trials,
         "protected_runs": p_m.total_trials, "adversarial_runs_per_configuration": b_m.adversarial_trials,
         "benign_runs_per_configuration": b_m.benign_trials, "python_version": platform.python_version(),
-        "git_commit": git_commit,
+        "source_revision": f"{git_commit}+working-tree",
+        "source_revision_note": "Base Git commit plus the working-tree source state used when this experiment was executed; it is not asserted to be the later artifact commit.",
         "attacker_behavior": "fixed COMPROMISED_VENDOR_SESSION playbook; seeded benign/adversarial mix",
         "timing_model": "deterministic simulated monotonic clock; not wall-clock timing",
     }

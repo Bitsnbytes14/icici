@@ -7,7 +7,8 @@
   "adversarial_runs_per_configuration": 40,
   "benign_runs_per_configuration": 10,
   "python_version": "3.12.6",
-  "git_commit": "5607b89cbde86afd7dc1163402ccdc4c9836ec44",
+  "source_revision": "c6c6b1239f8176fd81f770634f22898b514f22a9+working-tree",
+  "source_revision_note": "Base Git commit plus the working-tree source state used when this experiment was executed; it is not asserted to be the later artifact commit.",
   "attacker_behavior": "fixed COMPROMISED_VENDOR_SESSION playbook; seeded benign/adversarial mix",
   "timing_model": "deterministic simulated monotonic clock; not wall-clock timing"
 }

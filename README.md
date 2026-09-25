@@ -170,6 +170,7 @@ python -m unittest tests.test_simulation -v
 | Vendor cohort summary | `results/csv/vendors_summary.csv` |
 | Sample detection alerts | `results/csv/sample_alerts.csv` |
 | Markdown executive summary | `results/summary_report.md` |
+| Experiment provenance metadata | `results/experiment_metadata.json` (`source_revision` identifies the base commit and working-tree state used for generation) |
 | Publication charts (300 DPI) | `results/charts/*.png` |
 | Per-run structured event logs (JSONL) | `logs/*.jsonl` |
 | Full methodology, threat model, formulas | `docs/METHODOLOGY.md` |

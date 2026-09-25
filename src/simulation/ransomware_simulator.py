@@ -25,6 +25,11 @@ from src.network.access_control import AccessControl
 
 MARKER = "SIMULATED_RANSOMWARE_STATE\n"
 
+# This module lives at <repository>/src/simulation/.  Resolve the canonical
+# repository root from the module itself so a caller cannot redirect the
+# destructive workspace reset by supplying a lookalike directory.
+CANONICAL_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
 # resource name -> (source dummy data file, workspace file name)
 FILE_MAP: dict[str, tuple[str, str]] = {
     "vendor_documents": ("dummy_documents/vendor_contract.csv", "vendor_contract.csv"),
@@ -42,13 +47,13 @@ def workspace_dir(project_root: Path) -> Path:
 def reset_workspace(project_root: Path) -> Path:
     """Recreate data/simulation_workspace/ fresh from the canonical dummy data."""
     root = Path(project_root).resolve()
+    if root != CANONICAL_REPOSITORY_ROOT:
+        raise ValueError("Refusing to reset a workspace outside the canonical simulation repository")
     data_dir = (root / "data").resolve()
     ws = workspace_dir(root).resolve()
     expected_workspace = (data_dir / "simulation_workspace").resolve()
     # The destructive reset is deliberately limited to this exact directory.
     # Refuse any caller-supplied root that resolves to a different target.
-    if not (root / "AGENTS.md").is_file() or not (root / "src").is_dir():
-        raise ValueError("Refusing to reset a workspace outside the simulation repository")
     if ws != expected_workspace or ws.parent != data_dir:
         raise ValueError("Refusing to reset a workspace outside data/simulation_workspace")
     if not data_dir.is_dir():

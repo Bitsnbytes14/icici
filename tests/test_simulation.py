@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import unittest
 import csv
+import shutil
 from pathlib import Path
 
 from src.auth.authentication import Authenticator
@@ -272,8 +273,20 @@ class TestSimulationComponents(unittest.TestCase):
         self.assertEqual(metrics["PROTECTED"].file_protection_rate_pct, 100.0)
 
     def test_workspace_reset_rejects_unexpected_root(self) -> None:
-        with self.assertRaises(ValueError):
-            reset_workspace(self.project_root.parent)
+        fake_root = self.project_root / "data" / "external_lookalike"
+        fake_workspace = fake_root / "data" / "simulation_workspace"
+        try:
+            (fake_root / "src").mkdir(parents=True)
+            (fake_root / "AGENTS.md").write_text("lookalike", encoding="utf-8")
+            fake_workspace.mkdir(parents=True)
+            sentinel = fake_workspace / "must_not_delete.txt"
+            sentinel.write_text("sentinel", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                reset_workspace(fake_root)
+            self.assertTrue(sentinel.exists())
+        finally:
+            if fake_root.exists():
+                shutil.rmtree(fake_root)
 
     def test_per_trial_logs_have_context(self) -> None:
         from src.simulation.engine import ExperimentEngine
