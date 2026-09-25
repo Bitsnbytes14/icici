@@ -1,0 +1,3 @@
+Scenario,Total Trials,Detection Rate (%),False Positive Rate (%),MDT (s),MTTC (s),Containment Rate (%),Mean Initial Risk,Mean Final Risk,Risk Reduction (%),Avg Compromised Files,File Protection Rate (%),Avg Successful Lateral Steps,Avg Sensitive/Backup Assets Reached,Avg Internal Assets Reached
+BASELINE,50,0.0,0.0,0.0,0.0,0.0,44.0,53.0,-20.5,4.0,20.0,7.4,3.2,2.4
+PROTECTED,50,100.0,0.0,1.08,0.6,100.0,44.0,16.0,63.6,0.0,100.0,0.68,0.0,0.0

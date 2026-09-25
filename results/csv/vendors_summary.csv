@@ -1,0 +1,6 @@
+Vendor ID,Name,Category,Access Type,Privilege Level,MFA Enabled,Duration (h),Accessible Systems,Risk Tier,Failed Auth,Suspicious Flags
+VEND-001,Alpha Cloud Solutions,Infrastructure & Hosting,Remote Access,ELEVATED,False,12.0,vendor_portal; support_api; application_server,HIGH,4,abnormal_login_hour; repeated_failures
+VEND-002,FinTech Bridge Gateways,Payment Gateway Integration,API Access,STANDARD,True,4.0,support_api; transaction_server,MEDIUM,0,none
+VEND-003,SecureATM Maintenance Inc,ATM Hardware & Terminal Support,Remote Support,STANDARD,False,8.0,vendor_portal; support_api,MEDIUM,1,unauthorized_path_probe
+VEND-004,Apex Core Banking Consultants,Advisory & Configuration,Privileged Access,ADMIN,False,24.0,vendor_portal; application_server; customer_database; transaction_database; backup_server,CRITICAL,5,privilege_escalation_attempt; lateral_movement_spike
+VEND-005,DocuVault Archival Services,Document Records Management,Batch SFTP,READ_ONLY,True,2.0,vendor_portal; vendor_documents,LOW,0,none

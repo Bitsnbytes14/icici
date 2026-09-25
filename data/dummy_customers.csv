@@ -1,0 +1,6 @@
+customer_id,name,account_type,balance,branch_code,status
+CUST-1001,Synthetic Customer A,SAVINGS,45000.00,SYN001,ACTIVE
+CUST-1002,Synthetic Customer B,CURRENT,128000.50,SYN002,ACTIVE
+CUST-1003,Synthetic Customer C,SAVINGS,8200.75,SYN001,ACTIVE
+CUST-1004,Synthetic Customer D,FIXED_DEPOSIT,500000.00,SYN003,ACTIVE
+CUST-1005,Synthetic Customer E,SAVINGS,15400.20,SYN002,ACTIVE

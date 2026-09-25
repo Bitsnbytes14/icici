@@ -1,0 +1,11 @@
+resource_id,name,zone,sensitivity,criticality_score,description,contains_data
+AST-001,vendor_portal,VENDOR_ZONE,NORMAL,1,Vendor-facing support portal used for remote assistance tickets,False
+AST-002,support_api,VENDOR_ZONE,NORMAL,2,API used by vendor support tooling to reach internal systems,False
+AST-003,vendor_documents,VENDOR_ZONE,NORMAL,2,Vendor contract and onboarding documents store,True
+AST-004,application_server,INTERNAL_ZONE,NORMAL,3,Core banking application processing server,False
+AST-005,employee_server,INTERNAL_ZONE,NORMAL,3,Internal HR and employee services server,False
+AST-006,transaction_server,INTERNAL_ZONE,NORMAL,4,High-throughput transaction routing server,False
+AST-007,customer_database,SENSITIVE_ZONE,CRITICAL,5,Customer master data and PII repository,True
+AST-008,transaction_database,SENSITIVE_ZONE,CRITICAL,5,Ledger and financial transaction record store,True
+AST-009,employee_records,SENSITIVE_ZONE,CRITICAL,4,Staff payroll and authentication directory records,True
+AST-010,backup_server,BACKUP_ZONE,CRITICAL,5,Immutable and secondary backup storage repository,True

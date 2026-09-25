@@ -1,0 +1,5 @@
+emp_id,name,department,role,clearance_level
+EMP-501,Synthetic Staff 1,IT Operations,Sysadmin,HIGH
+EMP-502,Synthetic Staff 2,Compliance,Auditor,MEDIUM
+EMP-503,Synthetic Staff 3,Retail Banking,Branch Manager,STANDARD
+EMP-504,Synthetic Staff 4,SecOps,SOC Analyst,HIGH

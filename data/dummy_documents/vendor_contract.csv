@@ -1,0 +1,6 @@
+contract_id,vendor_id,effective_date,expiration_date,service_level,nda_signed
+CTR-2025-01,VEND-001,2025-01-01,2026-12-31,Tier-1 24x7,True
+CTR-2025-02,VEND-002,2025-03-01,2026-02-28,Tier-2 Business Hours,True
+CTR-2025-03,VEND-003,2024-06-01,2025-05-31,Tier-2 On-call,True
+CTR-2025-04,VEND-004,2025-08-01,2026-07-31,Advisory Fixed Term,True
+CTR-2025-05,VEND-005,2024-11-01,2026-10-31,Archival Monthly,True

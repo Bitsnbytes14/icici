@@ -1,0 +1,5 @@
+backup_id,timestamp,target_system,backup_type,checksum,status
+BCK-801,2026-09-24T00:00:00,customer_database,FULL,a1b2c3d4e5f6,VERIFIED
+BCK-802,2026-09-24T06:00:00,transaction_database,INCREMENTAL,f6e5d4c3b2a1,VERIFIED
+BCK-803,2026-09-24T12:00:00,employee_records,FULL,123456abcdef,VERIFIED
+BCK-804,2026-09-25T00:00:00,application_server,SNAPSHOT,fedcba654321,VERIFIED

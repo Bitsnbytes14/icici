@@ -1,0 +1,2 @@
+{"timestamp": 0.2, "user": "vend-001_elevated", "action": "AUTHENTICATE", "target": "auth_gateway", "result": "BLOCKED", "severity": "HIGH", "details": {"mfa_required": false, "reason": "INVALID_CREDENTIALS", "vendor_id": "VEND-001"}}
+{"timestamp": 0.4, "user": "vend-001_elevated", "action": "VENDOR_READ", "target": "vendor_portal", "result": "ALLOWED", "severity": "LOW", "details": {"business_hours": true, "authorized": true}}
