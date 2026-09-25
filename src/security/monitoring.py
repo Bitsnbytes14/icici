@@ -37,6 +37,7 @@ class EventLogger:
     log_path: Path
     clock: SimClock = field(default_factory=SimClock)
     events: list[SecurityEvent] = field(default_factory=list)
+    context: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.log_path = Path(self.log_path)
@@ -56,5 +57,5 @@ class EventLogger:
         )
         self.events.append(event)
         with open(self.log_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event.to_dict()) + "\n")
+            f.write(json.dumps({**self.context, **event.to_dict()}) + "\n")
         return event

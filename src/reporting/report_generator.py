@@ -125,18 +125,22 @@ class ReportGenerator:
 | Metric Dimension | Baseline (Legacy Trust) | Protected (Zero-Trust Controls) | Improvement / Delta |
 | :--- | :--- | :--- | :--- |
 | **Total Multi-Vendor Trials** | {b.total_trials} | {p.total_trials} | Identical cohort size |
+| **Adversarial runs** | {b.adversarial_trials} | {p.adversarial_trials} | Impact metrics use this scope |
+| **Benign runs** | {b.benign_trials} | {p.benign_trials} | False-positive scope |
 | **Detection Rate (%)** | {b.detection_rate_pct}% | {p.detection_rate_pct}% | **+{round(p.detection_rate_pct - b.detection_rate_pct, 1)}%** |
-| **False Positive Rate (%)** | {b.false_positive_rate_pct}% | {p.false_positive_rate_pct}% | {p.false_positive_rate_pct}% (Low friction) |
-| **Mean Detection Time (s)** | {b.mean_detection_time_sec}s | {p.mean_detection_time_sec}s | Fast anomaly triage |
+| **False Positive Rate (%)** | {b.false_positive_rate_pct}% | {p.false_positive_rate_pct}% | Benign sessions only |
+| **Benign legitimate-access rate (%)** | {b.benign_legitimate_access_rate_pct}% | {p.benign_legitimate_access_rate_pct}% | Same access pipeline |
+| **Mean Time to First Detection (simulated s)** | {b.mean_first_detection_time_sec}s | {p.mean_first_detection_time_sec}s | Event-rule alert timestamp |
+| **Mean Time to Actionable Detection (simulated s)** | {b.mean_actionable_detection_time_sec}s | {p.mean_actionable_detection_time_sec}s | First HIGH/CRITICAL containment trigger |
 | **Mean Time to Contain (s)** | {b.mean_time_to_contain_sec}s | {p.mean_time_to_contain_sec}s | Rapid automated isolation |
 | **Containment Rate (%)** | {b.containment_rate_pct}% | {p.containment_rate_pct}% | **+{round(p.containment_rate_pct - b.containment_rate_pct, 1)}%** |
 | **Mean Pre-Control Risk Score** | {b.mean_initial_risk} | {b.mean_initial_risk} | Identical baseline posture |
 | **Mean Post-Control Risk Score** | {b.mean_final_risk} | {p.mean_final_risk} | **-{round(b.mean_final_risk - p.mean_final_risk, 1)} pts** |
 | **Relative Risk Reduction (%)** | {b.risk_reduction_pct}% | {p.risk_reduction_pct}% | **+{p.risk_reduction_pct}%** |
-| **Avg Assets Compromised / Run** | {b.mean_assets_compromised} | {p.mean_assets_compromised} | Reduced lateral spread |
+| **Avg Accessible Assets / Adversarial Run** | {b.mean_accessible_assets} | {p.mean_accessible_assets} | Reachable, not compromised |
 | **Avg Successful Lateral Steps / Run** | {b.mean_lateral_transitions_successful} | {p.mean_lateral_transitions_successful} | Segmentation attenuation |
 | **Avg Sensitive/Backup Assets Reached** | {b.mean_sensitive_assets_reached} | {p.mean_sensitive_assets_reached} | Tier-0 exposure |
-| **Avg Files Encrypted / Run** | {b.mean_files_compromised} | {p.mean_files_compromised} | Blast radius halted |
+| **Avg Files Affected / Adversarial Run** | {b.mean_files_compromised} | {p.mean_files_compromised} | Blast radius halted |
 | **File Protection Rate (%)** | {b.file_protection_rate_pct}% | {p.file_protection_rate_pct}% | **+{round(p.file_protection_rate_pct - b.file_protection_rate_pct, 1)}%** |
 
 ---
@@ -154,17 +158,17 @@ where a credential-only compromise with no second factor is correctly blocked
 before it ever reaches RBAC or segmentation.
 
 1. **Ransomware Vector Elimination via Defense-in-Depth:**
-   - In the baseline environment, a single compromised vendor credential allowed full traversal from `vendor_portal` across internal tiers to `customer_database` and `backup_server`, resulting in an average of **{b.mean_files_compromised} files marked as encrypted** per run.
+   - In the baseline environment, a compromised vendor session allowed traversal from `vendor_portal` across internal tiers to sensitive resources, resulting in an average of **{b.mean_files_compromised} files marked as encrypted per adversarial run**.
    - Under Zero-Trust controls, an *already-authenticated* compromised session was still confined by least-privilege RBAC and strict zone segmentation, which limited lateral movement to **{p.mean_lateral_transitions_successful} successful hop(s)/run** and **{p.mean_sensitive_assets_reached} sensitive/backup asset(s) reached/run** on average -- yielding a **{p.file_protection_rate_pct}% file protection rate** once detection and automated containment isolated the session.
 
 2. **Automated Incident Response vs Lateral Traversal:**
-   - Active detection identified anomalies within **{p.mean_detection_time_sec}s** and triggered automated session isolation in **{p.mean_time_to_contain_sec}s**, halting lateral movement before sensitive data stores could be enumerated.
+   - The protected configuration's first alert occurred at **{p.mean_first_detection_time_sec}s** simulated time; its first actionable alert occurred at **{p.mean_actionable_detection_time_sec}s**. The measured containment duration was **{p.mean_time_to_contain_sec}s** simulated time. These deterministic simulation-clock values are not real SOC response-time measurements.
 
 3. **Vendor Risk Scoring Governance:**
    - The multi-factor scoring model effectively differentiated low-privilege contractors from high-privilege administrators. This is a project-specific, transparent scoring model (see `docs/METHODOLOGY.md` Section 6) -- not an industry-standard cybersecurity metric.
    - Enforcing Just-in-Time (JIT) access windows and least-privilege RBAC reduced average vendor risk exposure by **{p.risk_reduction_pct}%**.
 
-4. **Repeated vs. independent trials:** each configuration is evaluated over **50 repeated simulation runs** (5 synthetic vendor profiles x 10 runs each, seed=42). The attacker follows a fixed, deterministic playbook (probe -> attempted privilege escalation -> attempted lateral movement -> attempted ransomware impact) per vendor, so repeated runs for the same vendor produce identical outcomes; per-vendor variation (privilege level, MFA posture, accessible systems) is what drives the differences seen across the cohort. These are **50 repeated simulation runs per configuration**, not 100 independent real-world experiments.
+4. **Repeated vs. independent trials:** each configuration is evaluated over **50 repeated simulation runs** (5 synthetic vendor profiles x 10 runs each, seed=42). The seeded mix selects benign versus `COMPROMISED_VENDOR_SESSION` repetitions; every adversarial repetition uses the same playbook: probe -> privilege-escalation attempt -> lateral movement -> sensitive-resource attempts -> harmless ransomware-marker attempts. These are not independent real-world experiments.
 
 ---
 

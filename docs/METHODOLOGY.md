@@ -48,9 +48,9 @@ The simulation adopts a formal adversary model based on the **MITRE ATT&CK for E
 ### 3. Assumptions & Scope Boundaries
 
 1. **Post-Compromise, Post-Authentication Ingress Assumption:** The main Protected-scenario experiment assumes that a third-party identity's credentials are already compromised **and** that the resulting session is already authenticated (`credential_compromised = True`, `authenticated_session = True`) -- e.g. via vendor phishing, an info-stealer on the contractor workstation, or a hijacked/replayed session token. The research question this project asks is what happens *after* that point (does RBAC, segmentation, detection, and containment stop the attack?), not how initial access or MFA was defeated. **No credential-theft or MFA-bypass technique is implemented anywhere in this codebase** -- the assumption simply sets a starting state. MFA is still part of the architecture and is evaluated independently as its own control test (`SimulationRunner.run_scenario_2_protected(assume_authenticated_session=False)`, exercised by `tests/test_simulation.py::test_protected_mfa_gate_blocks_credential_only_compromise`): a credential-only compromise with no second factor is correctly blocked before RBAC or segmentation are ever reached.
-2. **Deterministic Timekeeping:** Timing relies on a simulated monotonic clock (`SimClock`), where discrete actions increment time by fixed increments ($0.2\text{s}$ per action, $+0.4\text{s}$ containment latency), preventing sub-millisecond operating system scheduling jitter.
+2. **Deterministic Timekeeping:** Timing relies on a simulated monotonic clock (`SimClock`). Discrete actions increment time by $0.2\text{s}$ and containment has a configured $0.4\text{s}$ delay. The measured containment duration is $0.60\text{s}$ because the containment workflow also logs a flag-session action before applying that delay. These are model timings, not real SOC response times.
 3. **Safe File Sandboxing:** The simulated ransomware module operates exclusively within `data/simulation_workspace/`. It writes harmless text markers (`SIMULATED_RANSOMWARE_STATE\n`) and appends `.simulated_encrypted`.
-4. **Fixed Attacker Playbook:** In both scenarios the simulated attacker follows the identical, deterministic sequence of actions (probe -> attempted privilege escalation -> attempted lateral movement -> attempted ransomware impact) -- see Section 7. Only the security configuration (RBAC scope, segmentation, detection, containment) differs between Baseline and Protected. The attacker itself is not adaptive and does not vary its behaviour based on what it encounters.
+4. **Fixed Attacker Playbook:** In both scenarios the simulated attacker follows the identical, deterministic sequence (probe -> privilege-escalation attempt -> lateral movement -> sensitive-resource attempts -> harmless ransomware-marker attempts). Only the security configuration (RBAC scope, segmentation, detection, containment) changes the outcome. The attacker is not adaptive.
 
 ---
 
@@ -144,7 +144,7 @@ Where the weights satisfy $\sum w_i = 1.00$:
 * **Privileges:** Least-privilege RBAC; vendor restricted exclusively to systems it is explicitly provisioned for within `VENDOR_ZONE`.
 * **Network Topology:** Micro-segmentation; strict denial of all cross-zone traffic.
 * **Monitoring:** Active deterministic detection engine analyzing behavioral anomalies in real-time.
-* **Automated Containment:** Dynamic policy automatically isolates compromised sessions upon critical/high-severity alert generation ($\text{Latency} = 0.4\text{s}$).
+* **Automated Containment:** Dynamic policy isolates the in-memory simulated user/session upon critical/high-severity alert generation. Its observed duration is measured from the simulated event stream (currently $0.60\text{s}$), not asserted as a real-world response time.
 
 **Attack chain under test (Protected scenario):**
 ```
@@ -171,7 +171,12 @@ Ransomware attempt contained (blocked by RBAC/segmentation and/or isolation)
 
 ### 8. Detection Engine Rules
 
-The simulation incorporates 7 deterministic detection rules:
+The code implements 7 deterministic detection rules. The benchmark exercises
+privilege-escalation, repeated-unauthorized-access, resource-count,
+sensitive-zone, and ransomware-behavior rules; MFA failure is exercised by a
+separate control test. `OFF_HOURS_LOGIN` is implemented but is not a benchmark
+claim because the shared benchmark playbook does not emit an off-hours
+authentication event.
 1. `MFA_FAILURE` [CRITICAL]: Fired when valid credentials fail the second factor.
 2. `OFF_HOURS_LOGIN` [MEDIUM]: Fired when vendor initiates access outside designated maintenance windows.
 3. `SENSITIVE_ZONE_ACCESS` [HIGH / CRITICAL]: Fired upon any probe directed at `SENSITIVE_ZONE` or `BACKUP_ZONE`.
@@ -191,16 +196,13 @@ The simulation incorporates 7 deterministic detection rules:
        1. Flag Active Session (Telemetry Enhanced)
                │
                ▼
-       2. Elevate Vendor Dynamic Risk Score to CRITICAL
+       2. Revoke Session / Isolate User Identity (user.isolate())
                │
                ▼
-       3. Revoke Session / Isolate User Identity (user.isolate())
+       3. Dispatch SOC Administrator High-Priority Alert
                │
                ▼
-       4. Dispatch SOC Administrator High-Priority Alert
-               │
-               ▼
-       5. Write Immutable Incident Audit Record
+       4. Retain incident information in in-memory simulation history
 ```
 
 ---
@@ -213,7 +215,7 @@ The simulation incorporates 7 deterministic detection rules:
 | **Transparent Risk Engine** | 5-factor weighted normalized linear score | Defensible, explainable for viva and academic review | Correlation between privilege/MFA and final score | Static weights rather than adaptive Bayesian updates |
 | **Simulated Monotonic Clock** | Discrete `SimClock` advancing by step values | Eliminates OS microsecond scheduling noise | Millisecond timestamps for detection and containment | Does not reflect real network transmission jitter |
 | **Safe Ransomware Marker** | String replacement and file renaming in sandbox | Completely safe; zero real destructive malware risk | Count of marked vs blocked files in workspace | Does not test low-level Windows kernel file locks |
-| **Zero-Trust Access Pipeline** | 5-layer evaluated access controller | Attributable metrics on which defense stopped each hop | Layer pass/fail telemetry on every network transition | Evaluates at connection level, not deep packet inspection |
+| **Zero-Trust Access Pipeline** | 5-layer evaluated access controller | Attributable layer telemetry on every attempted access | RBAC/segmentation/isolation pass/fail telemetry | Evaluates at connection level, not deep packet inspection |
 
 ---
 
@@ -228,14 +230,14 @@ These numbers are generated by `scripts/run_simulation.py` and are reproduced ve
 | **Total Evaluation Trials** | 50 | 50 | Balanced evaluation |
 | **Detection Rate (%)** | **0.0%** | **100.0%** | $+100.0\%$ Threat Visibility |
 | **False Positive Rate (%)** | **0.0%** | **0.0%** | Zero false alarm overhead |
-| **Mean Detection Time (MDT)** | N/A ($0.00\text{s}$) | **1.08s** | Sub-2-second anomaly alerting |
+| **Mean Time to Actionable Detection** | N/A ($0.00\text{s}$) | See generated results | First HIGH/CRITICAL containment-triggering alert |
 | **Mean Time to Contain (MTTC)**| N/A ($0.00\text{s}$) | **0.60s** | Immediate automated containment |
 | **Containment Rate (%)** | **0.0%** | **100.0%** | Complete attack disruption |
 | **Avg Successful Lateral Steps / Run** | **7.40** | **0.68** | Segmentation attenuation |
 | **Avg Sensitive/Backup Assets Reached / Run** | **3.20** | **0.00** | Tier-0 exposure eliminated |
 | **Mean Post-Control Risk Score**| **53.0 pts** | **16.0 pts** | $-37.0$ points risk reduction |
-| **Avg Files Encrypted / Run** | **4.00 files** | **0.00 files** | 100% Data Asset Preservation |
-| **File Protection Rate (%)** | **20.0%** | **100.0%** | $+80.0\%$ Blast Radius Elimination |
+| **Avg Files Affected / Adversarial Run** | See generated results | See generated results | Calculated only from actual attack attempts |
+| **File Protection Rate (%)** | See generated results | See generated results | Denominator is the recorded target count |
 
 Importantly, in the Protected scenario the compromised identity is assumed to
 already hold an authenticated session (Section 3, Assumption 1) -- these
@@ -256,7 +258,7 @@ no second factor) is blocked before it ever reaches RBAC/segmentation.
 
 1. **Host-Level File System Dynamics:** The simulation abstracts file operations at the file-handle level rather than simulating Windows NTFS Volume Shadow Copies (VSS) or file-system filter drivers.
 2. **Identity Provider Integration:** The simulated authentication checks evaluate in-memory state rather than real SAML 2.0 / OIDC assertion exchanges.
-3. **Fixed, Non-Adaptive Attacker:** Both scenarios run the identical scripted attacker playbook (Section 3, Assumption 4). Because of this, repeated trials for the same vendor + scenario produce **identical** outcomes -- the "50 trials per configuration" are correctly described as **50 repeated simulation runs across 5 synthetic vendor profiles**, not 100 independent real-world experiments. Variation across the cohort comes entirely from per-vendor differences (privilege level, MFA posture, accessible systems), not from randomized attacker behaviour. No artificial randomness has been added to make results appear more variable than they are.
+3. **Fixed, Non-Adaptive Attacker:** Both scenarios run the identical scripted attacker playbook (Section 3, Assumption 4). The fixed seed selects the benign/adversarial repetition mix, and every adversarial repetition is the same playbook. These are **50 repeated simulation runs per configuration across 5 synthetic vendor profiles**, not independent real-world experiments.
 4. **Benign-Session Authentication Flag:** For `NORMAL_SESSION` (benign) trials, the `authenticated` field on the trial record reflects a modeling simplification -- `Authenticator.authenticate()` proxies "password correct" with the `credential_compromised` flag (see `src/auth/authentication.py`), which is `False` for a benign session and therefore reports `authenticated=False` even though the benign path is otherwise treated as an authorized business-hours session. This does not affect any detection/containment/impact metric, because the benign code path does not route through the shared `AccessControl` pipeline (it uses a fixed, non-adversarial stub result). Documented here for transparency rather than silently left unexplained.
 5. **Vendor Risk Score is Project-Specific:** See Section 6 -- it is a custom, transparent formula for this case study, not an industry-standard metric.
 6. **Future Extension:** Integrating active honeypot credentials and canary tokens within the synthetic vendor zone to evaluate early deception-based alerting; modeling an adaptive attacker that varies its behaviour per trial.

@@ -45,19 +45,18 @@ defeated. See [Baseline vs. Protected](#4-baseline-environment) below.
 - **Synthetic vendor cohort:** 5 vendor profiles with varying privilege
   levels, MFA posture, and accessible systems — `data/vendors.csv`.
 - **Two scenarios, same attacker playbook:** both scenarios run the identical
-  scripted sequence of attacker actions (probe → attempted privilege
-  escalation → attempted lateral movement → attempted ransomware impact).
+  scripted sequence (probe → privilege-escalation attempt → lateral movement
+  → sensitive-resource attempts → harmless ransomware-marker attempts).
   Only the security configuration differs between scenarios — never the
   attacker's behaviour.
 - **Multi-trial benchmark:** 5 vendors × 10 trials × 2 scenarios = **100
   total trials**, fixed random seed (`42`), fully reproducible
   (`src/simulation/engine.py`).
-- **Repeated, not independent, trials:** because the attacker playbook is
-  fixed (not adaptive), repeated trials for the same vendor + scenario
-  produce identical results. This is accurately described as **50 repeated
-  simulation runs per configuration across 5 synthetic vendor profiles**, not
-  100 independent real-world experiments. No artificial randomness has been
-  added to make results look more variable than they are — see
+- **Repeated, not independent, trials:** this is **50 repeated simulation
+  runs per configuration across 5 synthetic vendor profiles**, not 100
+  independent real-world experiments. Seed 42 selects a deterministic
+  benign/adversarial mix; every adversarial repetition uses the fixed,
+  non-adaptive playbook — see
   `docs/METHODOLOGY.md` Section 12.
 
 ## 4. Baseline Environment (Unprotected / Legacy Trust)
@@ -126,17 +125,18 @@ correctly blocked before RBAC or segmentation are ever reached. See
 Every metric below is computed from actual simulation runs — never
 hardcoded — via `src/metrics/evaluator.py` and `src/simulation/engine.py`:
 
-1. Accessible / compromised assets (`assets_compromised`)
+1. Accessible assets reached during adversarial traversal (`accessible_assets`)
 2. Sensitive/backup resources reached (`sensitive_assets_reached`)
 3. Internal-zone resources reached (`internal_assets_reached`)
 4. Successful lateral-movement steps (`lateral_transitions_successful`)
 5. Blocked access attempts (`assets_blocked`)
-6. Detection rate (%)
-7. Mean detection time (MDT, simulated seconds)
+6. Detection rate (%) on adversarial runs
+7. Mean time to first detection and mean time to actionable detection
+   (simulated seconds; not operational SOC timing)
 8. Containment rate (%)
 9. Mean time to contain (MTTC, simulated seconds)
-10. Simulated affected files/assets (`files_compromised`, `files_blocked`)
-11. File / data protection rate (%)
+10. Simulated affected files (`files_compromised`, `files_blocked`) on adversarial runs
+11. File / data protection rate (%) from actual per-run target counts
 
 ## 8. How to Install
 
@@ -192,10 +192,9 @@ from a fresh simulation run (fixed seed `42`, fully reproducible).
 
 ## 13. Experimental Limitations
 
-- **Fixed, non-adaptive attacker playbook** — see Section 3. Repeated trials
-  for the same vendor + scenario are deterministic; variation across the
-  100-trial cohort comes from per-vendor differences, not randomized attacker
-  behaviour.
+- **Fixed, non-adaptive attacker playbook** — see Section 3. The seed only
+  selects the documented benign/adversarial repetition mix; it does not create
+  artificial attacker variation or statistical independence.
 - **Vendor risk score is project-specific** (`src/risk/scoring.py`), not an
   industry-standard metric (not CVSS/FAIR/NIST CSF) — used only as an
   internal, explainable comparative measure.

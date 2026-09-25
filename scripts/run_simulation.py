@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import sys
 import time
+import json
+import platform
+import subprocess
 from pathlib import Path
 
 # Ensure project root is in sys.path
@@ -91,7 +94,7 @@ def run_live_demonstration(project_root: Path) -> None:
     for a in res_p.alerts_generated:
         print(f"        * [{a.severity}] {a.rule}: {a.reason}")
         print(f"          Action: {a.recommended_action}")
-    print(f"      - Automated Containment: {res_p.incident_contained} (Detected at t={res_p.detection_time}s, Contained at t={res_p.containment_time}s, Latency={res_p.response_latency}s)")
+    print(f"      - Automated Containment: {res_p.incident_contained} (Actionable detection at t={res_p.actionable_detection_time}s, Contained at t={res_p.containment_time}s, Measured latency={res_p.response_latency}s)")
     print(f"      - Simulated Ransomware Impact: {len(res_p.simulated_compromised_files)} files encrypted ({len(res_p.simulated_blocked_files)} BLOCKED)")
 
     print("\n  >>> Sub-check: MFA Gate Tested Separately (credential-only compromise, no assumed session)")
@@ -121,11 +124,12 @@ def run_live_demonstration(project_root: Path) -> None:
     print("  " + "-" * 85)
     print(f"  {'Detection Rate (%)':<35} {b_m.detection_rate_pct:<18.1f} {p_m.detection_rate_pct:<18.1f} +{round(p_m.detection_rate_pct - b_m.detection_rate_pct, 1)}%")
     print(f"  {'False Positive Rate (%)':<35} {b_m.false_positive_rate_pct:<18.1f} {p_m.false_positive_rate_pct:<18.1f} {p_m.false_positive_rate_pct:.1f}%")
-    print(f"  {'Mean Detection Time (MDT)':<35} {b_m.mean_detection_time_sec:<18.2f}s {p_m.mean_detection_time_sec:<18.2f}s Rapid Alerting")
+    print(f"  {'Mean Time to First Detection':<35} {b_m.mean_first_detection_time_sec:<18.2f}s {p_m.mean_first_detection_time_sec:<18.2f}s Simulated clock")
+    print(f"  {'Mean Time to Actionable Detection':<35} {b_m.mean_actionable_detection_time_sec:<18.2f}s {p_m.mean_actionable_detection_time_sec:<18.2f}s Simulated clock")
     print(f"  {'Mean Time to Contain (MTTC)':<35} {b_m.mean_time_to_contain_sec:<18.2f}s {p_m.mean_time_to_contain_sec:<18.2f}s Automated Revocation")
     print(f"  {'Containment Rate (%)':<35} {b_m.containment_rate_pct:<18.1f} {p_m.containment_rate_pct:<18.1f} +{round(p_m.containment_rate_pct - b_m.containment_rate_pct, 1)}%")
     print(f"  {'Mean Post-Control Risk Score':<35} {b_m.mean_final_risk:<18.1f} {p_m.mean_final_risk:<18.1f} -{round(b_m.mean_final_risk - p_m.mean_final_risk, 1)} pts")
-    print(f"  {'Avg Data Files Encrypted / Run':<35} {b_m.mean_files_compromised:<18.2f} {p_m.mean_files_compromised:<18.2f} Zero Spread")
+    print(f"  {'Avg Data Files Affected / Adversarial Run':<35} {b_m.mean_files_compromised:<18.2f} {p_m.mean_files_compromised:<18.2f} Zero Spread")
     print(f"  {'File Protection Rate (%)':<35} {b_m.file_protection_rate_pct:<18.1f} {p_m.file_protection_rate_pct:<18.1f} +{round(p_m.file_protection_rate_pct - b_m.file_protection_rate_pct, 1)}%")
 
     # Step 6: Export CSV Data & Generate Publication Charts
@@ -140,12 +144,27 @@ def run_live_demonstration(project_root: Path) -> None:
     p_metrics = results_dir / "csv" / "comparison_metrics.csv"
     MetricsEvaluator.export_metrics_to_csv(metrics, p_metrics)
     p_report = reporter.generate_markdown_summary(metrics, vendors)
+    try:
+        git_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project_root, capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        git_commit = "unavailable"
+    metadata = {
+        "experiment_configuration_version": "2.0", "seed": engine.base_seed,
+        "total_records": len(trials), "baseline_runs": b_m.total_trials,
+        "protected_runs": p_m.total_trials, "adversarial_runs_per_configuration": b_m.adversarial_trials,
+        "benign_runs_per_configuration": b_m.benign_trials, "python_version": platform.python_version(),
+        "git_commit": git_commit,
+        "attacker_behavior": "fixed COMPROMISED_VENDOR_SESSION playbook; seeded benign/adversarial mix",
+        "timing_model": "deterministic simulated monotonic clock; not wall-clock timing",
+    }
+    (results_dir / "experiment_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
     print(f"  [CSV] Exported: {p_vend.relative_to(project_root)}")
     print(f"  [CSV] Exported: {p_trials.relative_to(project_root)}")
     print(f"  [CSV] Exported: {p_alerts.relative_to(project_root)}")
     print(f"  [CSV] Exported: {p_metrics.relative_to(project_root)}")
     print(f"  [DOC] Exported: {p_report.relative_to(project_root)}")
+    print("  [META] Exported: results/experiment_metadata.json")
 
     # Visualizations
     viz = AcademicVisualizer(results_dir / "charts")

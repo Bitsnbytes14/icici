@@ -1,0 +1,13 @@
+{
+  "experiment_configuration_version": "2.0",
+  "seed": 42,
+  "total_records": 100,
+  "baseline_runs": 50,
+  "protected_runs": 50,
+  "adversarial_runs_per_configuration": 40,
+  "benign_runs_per_configuration": 10,
+  "python_version": "3.12.6",
+  "git_commit": "5607b89cbde86afd7dc1163402ccdc4c9836ec44",
+  "attacker_behavior": "fixed COMPROMISED_VENDOR_SESSION playbook; seeded benign/adversarial mix",
+  "timing_model": "deterministic simulated monotonic clock; not wall-clock timing"
+}

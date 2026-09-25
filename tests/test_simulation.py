@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import unittest
+import csv
 from pathlib import Path
 
 from src.auth.authentication import Authenticator
@@ -34,6 +35,8 @@ from src.security.containment import ContainmentManager
 from src.security.detection import DetectionEngine
 from src.security.monitoring import SimClock, EventLogger
 from src.simulation.scenarios import SimulationRunner
+from src.simulation.scenarios import PLAYBOOK_ACTIONS
+from src.simulation.ransomware_simulator import reset_workspace, FILE_MAP
 from src.metrics.evaluator import MetricsEvaluator
 
 
@@ -233,17 +236,64 @@ class TestSimulationComponents(unittest.TestCase):
         trials = engine.run_benchmark(trials_per_vendor=2, vendors=self.vendors)
         protected_adv = [
             t for t in trials
-            if t.scenario_type == "PROTECTED" and t.attack_vector != "NORMAL_SESSION"
+            if t.scenario_type == "PROTECTED" and t.attacker_behavior == "COMPROMISED_VENDOR_SESSION"
         ]
         self.assertGreater(len(protected_adv), 0)
         # Values must vary by vendor (different systems_accessible / privilege
         # levels), proving they are computed per-run rather than a constant.
-        distinct_sensitive_reach = {t.sensitive_assets_reached for t in protected_adv}
-        self.assertGreaterEqual(len(distinct_sensitive_reach), 1)
         for t in protected_adv:
             self.assertGreaterEqual(t.lateral_transitions_successful, 0)
             self.assertGreaterEqual(t.sensitive_assets_reached, 0)
             self.assertGreaterEqual(t.internal_assets_reached, 0)
+
+    def test_shared_attacker_playbook_parity(self) -> None:
+        runner = SimulationRunner(self.project_root)
+        vendor = self.vendors["VEND-001"]
+        baseline = runner.run_scenario_1_baseline(vendor)
+        protected = runner.run_scenario_2_protected(vendor)
+        self.assertEqual(baseline.playbook_actions, PLAYBOOK_ACTIONS)
+        self.assertEqual(protected.playbook_actions, PLAYBOOK_ACTIONS)
+
+    def test_benign_session_authenticates_and_uses_access_control(self) -> None:
+        result = SimulationRunner(self.project_root).run_scenario_2_protected(
+            self.vendors["VEND-001"], is_adversarial=False
+        )
+        self.assertTrue(result.authenticated)
+        self.assertEqual(result.authentication_model, "benign_mfa_verified")
+        self.assertEqual(result.lateral_result.transitions_successful, 1)
+        self.assertFalse(result.incident_contained)
+
+    def test_file_protection_uses_recorded_target_counts(self) -> None:
+        from src.simulation.engine import ExperimentTrialRecord
+        def row(scenario: str, files: int, targets: int) -> ExperimentTrialRecord:
+            return ExperimentTrialRecord(1, 1, "V", scenario, "COMPROMISED_VENDOR_SESSION", True, False, False, None, None, False, None, None, 1, 1, 0, 1, 0, targets, files, targets-files, 0, 0, 0)
+        metrics = MetricsEvaluator.evaluate_cohort([row("BASELINE", 2, 2), row("PROTECTED", 0, 2)])
+        self.assertEqual(metrics["BASELINE"].file_protection_rate_pct, 0.0)
+        self.assertEqual(metrics["PROTECTED"].file_protection_rate_pct, 100.0)
+
+    def test_workspace_reset_rejects_unexpected_root(self) -> None:
+        with self.assertRaises(ValueError):
+            reset_workspace(self.project_root.parent)
+
+    def test_per_trial_logs_have_context(self) -> None:
+        from src.simulation.engine import ExperimentEngine
+        engine = ExperimentEngine(self.project_root, base_seed=42)
+        engine.run_benchmark(trials_per_vendor=1, vendors={"VEND-001": self.vendors["VEND-001"]})
+        log = self.project_root / "logs" / "trials" / "trial_0001_baseline.jsonl"
+        with open(log, encoding="utf-8") as f:
+            record = __import__("json").loads(f.readline())
+        self.assertEqual(record["trial_id"], 1)
+        self.assertEqual(record["scenario_type"], "BASELINE")
+
+    def test_metric_aggregation_matches_trial_records(self) -> None:
+        from src.simulation.engine import ExperimentEngine
+        trials = ExperimentEngine(self.project_root, 42).run_benchmark(trials_per_vendor=2, vendors=self.vendors)
+        metrics = MetricsEvaluator.evaluate_cohort(trials)
+        for scenario, metric in metrics.items():
+            adversarial = [t for t in trials if t.scenario_type == scenario and t.attacker_behavior == "COMPROMISED_VENDOR_SESSION"]
+            self.assertEqual(metric.adversarial_trials, len(adversarial))
+            expected = round((1 - sum(t.files_compromised for t in adversarial) / sum(t.ransomware_targets for t in adversarial)) * 100, 1)
+            self.assertEqual(metric.file_protection_rate_pct, expected)
 
 
 if __name__ == "__main__":

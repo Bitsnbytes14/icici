@@ -23,9 +23,11 @@ class Authenticator:
         self.mfa_required = mfa_required
 
     def authenticate(self, user: User) -> AuthResult:
-        # The simulation begins AFTER credential compromise, so a
-        # "correct password" check is simply the compromised flag.
-        password_ok = user.credential_compromised
+        # A password may be accepted either because the adversarial model
+        # assumes it was compromised, or because a benign vendor supplied its
+        # own valid credentials.  Neither case represents real credential
+        # verification.
+        password_ok = user.credential_compromised or user.has_valid_password
         user.password_verified = password_ok
         if not password_ok:
             return AuthResult(False, "INVALID_CREDENTIALS")

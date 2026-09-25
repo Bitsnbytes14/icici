@@ -41,8 +41,18 @@ def workspace_dir(project_root: Path) -> Path:
 
 def reset_workspace(project_root: Path) -> Path:
     """Recreate data/simulation_workspace/ fresh from the canonical dummy data."""
-    data_dir = project_root / "data"
-    ws = workspace_dir(project_root)
+    root = Path(project_root).resolve()
+    data_dir = (root / "data").resolve()
+    ws = workspace_dir(root).resolve()
+    expected_workspace = (data_dir / "simulation_workspace").resolve()
+    # The destructive reset is deliberately limited to this exact directory.
+    # Refuse any caller-supplied root that resolves to a different target.
+    if not (root / "AGENTS.md").is_file() or not (root / "src").is_dir():
+        raise ValueError("Refusing to reset a workspace outside the simulation repository")
+    if ws != expected_workspace or ws.parent != data_dir:
+        raise ValueError("Refusing to reset a workspace outside data/simulation_workspace")
+    if not data_dir.is_dir():
+        raise ValueError("Simulation data directory does not exist")
     if ws.exists():
         shutil.rmtree(ws)
     ws.mkdir(parents=True)

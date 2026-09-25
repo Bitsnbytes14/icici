@@ -52,13 +52,19 @@ class VendorProfile:
     failed_auth_count: int = 0
     suspicious_flags: list[str] = field(default_factory=list)
 
-    def to_user(self, credential_compromised: bool = True, has_mfa_token: bool | None = None) -> User:
+    def to_user(
+        self,
+        credential_compromised: bool = True,
+        has_mfa_token: bool | None = None,
+        has_valid_password: bool = False,
+    ) -> User:
         """Map synthetic vendor profile to an active simulation User identity."""
         effective_mfa_token = self.mfa_enabled if has_mfa_token is None else has_mfa_token
         user = User(
             username=f"{self.vendor_id.lower()}_{self.privilege_level.value.lower()}",
             role=self.privilege_level.value,
             credential_compromised=credential_compromised,
+            has_valid_password=has_valid_password,
             has_mfa_token=effective_mfa_token,
             status=AccountStatus.ACTIVE,
         )

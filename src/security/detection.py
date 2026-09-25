@@ -63,6 +63,7 @@ class DetectionEngine:
         self.current_risk_score = current_risk_score
 
         self.alerts: list[Alert] = []
+        self.first_alert_time: float | None = None
         self._fired_rules: set[str] = set()
         self._blocked_count = 0
         self._touched_resources: set[str] = set()
@@ -186,5 +187,7 @@ class DetectionEngine:
             details=event.details,
         )
         self.alerts.append(alert)
+        if self.first_alert_time is None:
+            self.first_alert_time = alert.timestamp
         self._fired_rules.add(rule)
         return alert

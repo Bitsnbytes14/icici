@@ -146,13 +146,13 @@ class AcademicVisualizer:
         """Figure 3: Mean Detection Time vs Containment Latency."""
         fig, ax = plt.subplots(figsize=(6.5, 4.2), dpi=300)
         scenarios = ["Baseline", "Protected"]
-        mdt_vals = [metrics["BASELINE"].mean_detection_time_sec, metrics["PROTECTED"].mean_detection_time_sec]
+        mdt_vals = [metrics["BASELINE"].mean_actionable_detection_time_sec, metrics["PROTECTED"].mean_actionable_detection_time_sec]
         mttc_vals = [metrics["BASELINE"].mean_time_to_contain_sec, metrics["PROTECTED"].mean_time_to_contain_sec]
 
         x = np.arange(len(scenarios))
         width = 0.35
 
-        ax.bar(x - width / 2, mdt_vals, width, label="Mean Detection Time (s)", color="#3b82f6")
+        ax.bar(x - width / 2, mdt_vals, width, label="Mean Time to Actionable Detection (s)", color="#3b82f6")
         ax.bar(x + width / 2, mttc_vals, width, label="Mean Time to Contain (s)", color="#8b5cf6")
 
         ax.set_ylabel("Simulated Seconds (s)")
@@ -181,9 +181,9 @@ class AcademicVisualizer:
     ) -> Path:
         """Figure 4: Average Assets and Files Impacted by Ransomware Traversal."""
         fig, ax = plt.subplots(figsize=(7, 4.5), dpi=300)
-        labels = ["Avg Compromised Banking Assets", "Avg Encrypted Data Stores"]
-        baseline_impact = [metrics["BASELINE"].mean_assets_compromised, metrics["BASELINE"].mean_files_compromised]
-        protected_impact = [metrics["PROTECTED"].mean_assets_compromised, metrics["PROTECTED"].mean_files_compromised]
+        labels = ["Avg Accessible Assets (Adversarial)", "Avg Affected Data Stores (Adversarial)"]
+        baseline_impact = [metrics["BASELINE"].mean_accessible_assets, metrics["BASELINE"].mean_files_compromised]
+        protected_impact = [metrics["PROTECTED"].mean_accessible_assets, metrics["PROTECTED"].mean_files_compromised]
 
         x = np.arange(len(labels))
         width = 0.35
@@ -216,12 +216,12 @@ class AcademicVisualizer:
         filename: str = "fig5_defense_in_depth_layers.png",
     ) -> Path:
         """Figure 5: Defense-in-depth layer attribution across protected trials."""
-        prot_adv = [t for t in trials if t.scenario_type == "PROTECTED" and t.attack_vector != "NORMAL_SESSION"]
+        prot_adv = [t for t in trials if t.scenario_type == "PROTECTED" and t.attacker_behavior == "COMPROMISED_VENDOR_SESSION"]
         total = len(prot_adv) or 1
 
         # Calculate stopping points
         auth_stopped = len([t for t in prot_adv if not t.authenticated])
-        lateral_stopped = len([t for t in prot_adv if t.authenticated and t.assets_compromised <= 1])
+        lateral_stopped = len([t for t in prot_adv if t.authenticated and t.accessible_assets <= 1])
         contained_early = len([t for t in prot_adv if t.containment_occurred])
 
         labels = ["Authentication / MFA", "RBAC & Segmentation", "Automated Session Containment"]

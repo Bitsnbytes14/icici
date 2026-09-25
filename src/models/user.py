@@ -23,6 +23,11 @@ class User:
     # No real credential theft is implemented anywhere in this codebase.
     credential_compromised: bool = False
 
+    # A benign vendor can also present its own valid password.  Keeping this
+    # distinct from ``credential_compromised`` lets normal-session trials use
+    # the same authentication pipeline without implying a compromise.
+    has_valid_password: bool = False
+
     # Whether the attacker also possesses a valid second factor for this
     # identity. A phished/leaked password does not imply MFA possession,
     # which is the entire point of the MFA control.
